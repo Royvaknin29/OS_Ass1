@@ -5,6 +5,8 @@
 # Save current register context in old
 # and then load register context from new.
 
+#test
+
 .globl swtch
 swtch:
   movl 4(%esp), %eax
