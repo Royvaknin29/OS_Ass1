@@ -186,12 +186,21 @@ struct {
 
 #define C(x)  ((x)-'@')  // Control-x
 
+void shiftBufferRight(){
+	// int bufLen = strlen(input.buf);
+	// cprintf("%s", "bufLen is:\n");
+	// cprintf("%d", bufLen);
+	
+
+
+}
+
 void
 consoleintr(int (*getc)(void))
 {
   int c, doprocdump = 0;
 
-  acquire(&cons.lock);
+  //acquire(&cons.lock);
   while((c = getc()) >= 0){
     switch(c){
     case C('P'):  // Process listing.
@@ -210,6 +219,13 @@ consoleintr(int (*getc)(void))
         consputc(BACKSPACE);
       }
       break;
+    case 228: //Left Arrow
+      	input.e--;
+      	wakeup(&input.r);
+      break;
+    case 229: //Right Arrow
+    	cprintf("%s", "Got Right Arrow!\n");
+      break;
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
@@ -223,7 +239,7 @@ consoleintr(int (*getc)(void))
       break;
     }
   }
-  release(&cons.lock);
+  //release(&cons.lock);
   if(doprocdump) {
     procdump();  // now call procdump() wo. cons.lock held
   }
@@ -293,5 +309,6 @@ consoleinit(void)
 
   picenable(IRQ_KBD);
   ioapicenable(IRQ_KBD, 0);
+  cprintf("%s", "WELCOME..\n");
 }
 
