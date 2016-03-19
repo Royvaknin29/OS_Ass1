@@ -108,6 +108,8 @@ void print(char* string){
       cli();
       cons.locking = 0;
       cprintf(string);
+      cprintf("\n");
+
     }
 
 void
@@ -195,11 +197,12 @@ struct {
 #define C(x)  ((x)-'@')  // Control-x
 
 void shiftBufferRight(){
-	// int bufLen = strlen(input.buf);
-	// cprintf("%s", "bufLen is:\n");
-	// cprintf("%d", bufLen);
-	
-
+    uint charToMove = input.e;
+    while(charToMove != inputCaretPos){
+      input.buf[(charToMove + 1) % INPUT_BUF] = input.buf[charToMove];
+      print("char --");
+      charToMove--;
+    }
 
 }
 
@@ -211,6 +214,10 @@ consoleintr(int (*getc)(void))
 
   acquire(&cons.lock);
   while((c = getc()) >= 0){
+    char str[2] = "\0";
+    str[0] = c;
+
+    print(str);
     switch(c){
     case C('P'):  // Process listing.
       doprocdump = 1;   // procdump() locks cons.lock indirectly; invoke later
@@ -232,6 +239,7 @@ consoleintr(int (*getc)(void))
       break;
     case 228: //Left Arrow
       	inputCaretPos--;
+       print("left arrow pressed\n");
 
       break;
     case 229: //Right Arrow
@@ -239,8 +247,9 @@ consoleintr(int (*getc)(void))
 
       break;
     default:
+      print("Defalut");
       if (input.e - inputCaretPos > 0){ //Marker is not at the end of the line:
-
+          shiftBufferRight();
 
       }
       if(c != 0 && input.e-input.r < INPUT_BUF){
