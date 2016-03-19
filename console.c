@@ -17,7 +17,7 @@
 static void consputc(int);
 
 static int panicked = 0;
-
+static int inputCaretPos = 0;
 static struct {
   struct spinlock lock;
   int locking;
@@ -210,18 +210,20 @@ consoleintr(int (*getc)(void))
       while(input.e != input.w &&
             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
         input.e--;
+        inputCaretPos--;
         consputc(BACKSPACE);
       }
       break;
     case C('H'): case '\x7f':  // Backspace
       if(input.e != input.w){
         input.e--;
+        inputCaretPos--;
         consputc(BACKSPACE);
       }
       break;
     case 228: //Left Arrow
-      	input.e--;
-      	wakeup(&input.r);
+      	inputCaretPos--;
+
       break;
     case 229: //Right Arrow
     	cprintf("%s", "Got Right Arrow!\n");
@@ -229,6 +231,7 @@ consoleintr(int (*getc)(void))
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
+        inputCaretPos++;
         input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
