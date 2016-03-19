@@ -14,6 +14,23 @@
 #include "proc.h"
 #include "x86.h"
 
+#define MAX_HISTORY 16
+static char* historyArray[MAX_HISTORY];
+static void replaceCurrentLine(char*);
+static void printBufferToLine();
+
+int sys_history(void)
+{
+  // char* buffer;
+  // int historyId;
+
+  // if(argstr(0, &buffer) == 0 || argint(1, &historyId) < 0)
+  //   return -1;
+  replaceCurrentLine(historyArray[0]);
+  // return history(buffer, historyId);
+  return 1;
+}
+
 static void consputc(int);
 
 static int panicked = 0;
@@ -260,8 +277,6 @@ outb(CRTPORT, 14);
 static void replaceCurrentLine(char* buff)
 {
   int pos, prevPos;
-  
-
 
 	clearCurrentLine();
     //Move cursor to beginning of the line:
@@ -356,7 +371,8 @@ consoleintr(int (*getc)(void))
     	 }
     	 break;
     case 227: //down:
-    	 	replaceCurrentLine("Hello bob!!");
+      sys_history();
+
       break;
     default:
       //print("Defalut");
@@ -463,5 +479,6 @@ consoleinit(void)
   picenable(IRQ_KBD);
   ioapicenable(IRQ_KBD, 0);
   //cprintf("%s", "WELCOME... Caret Navitation\n");
+  historyArray[0] = "History part 0!";
 }
 
