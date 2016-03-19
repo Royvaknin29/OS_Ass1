@@ -24,6 +24,8 @@ static struct {
 } cons;
 
 static void
+
+
 printint(int xx, int base, int sign)
 {
   static char digits[] = "0123456789abcdef";
@@ -101,6 +103,12 @@ cprintf(char *fmt, ...)
   if(locking)
     release(&cons.lock);
 }
+
+void print(char* string){
+      cli();
+      cons.locking = 0;
+      cprintf(string);
+    }
 
 void
 panic(char *s)
@@ -199,9 +207,9 @@ void
 consoleintr(int (*getc)(void))
 {
   
-  int c, doprocdump;
+  int c, doprocdump = 0;
 
-  //acquire(&cons.lock);
+  acquire(&cons.lock);
   while((c = getc()) >= 0){
     switch(c){
     case C('P'):  // Process listing.
@@ -227,10 +235,11 @@ consoleintr(int (*getc)(void))
 
       break;
     case 229: //Right Arrow
-    	cprintf("%s", "Got Right Arrow!\n");
+    	 print("right arrow pressed\n");
+
       break;
     default:
-      if (input.e - inputCaretPos > 0){
+      if (input.e - inputCaretPos > 0){ //Marker is not at the end of the line:
 
 
       }
@@ -247,7 +256,7 @@ consoleintr(int (*getc)(void))
       break;
     }
   }
-  //release(&cons.lock);
+  release(&cons.lock);
   if(doprocdump) {
     procdump();  // now call procdump() wo. cons.lock held
   }
