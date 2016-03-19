@@ -199,7 +199,7 @@ void
 consoleintr(int (*getc)(void))
 {
   
-  int c, doprocdump, inputCaretdiff = 0;
+  int c, doprocdump;
 
   //acquire(&cons.lock);
   while((c = getc()) >= 0){
