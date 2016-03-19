@@ -198,7 +198,8 @@ void shiftBufferRight(){
 void
 consoleintr(int (*getc)(void))
 {
-  int c, doprocdump = 0;
+  
+  int c, doprocdump, inputCaretdiff = 0;
 
   //acquire(&cons.lock);
   while((c = getc()) >= 0){
@@ -210,15 +211,15 @@ consoleintr(int (*getc)(void))
       while(input.e != input.w &&
             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
         input.e--;
-        inputCaretPos--;
         consputc(BACKSPACE);
+      inputCaretPos = input.e;
       }
       break;
     case C('H'): case '\x7f':  // Backspace
       if(input.e != input.w){
         input.e--;
-        inputCaretPos--;
         consputc(BACKSPACE);
+        inputCaretPos = input.e;
       }
       break;
     case 228: //Left Arrow
@@ -229,6 +230,10 @@ consoleintr(int (*getc)(void))
     	cprintf("%s", "Got Right Arrow!\n");
       break;
     default:
+      if (input.e - inputCaretPos > 0){
+
+
+      }
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
         inputCaretPos++;
@@ -312,6 +317,6 @@ consoleinit(void)
 
   picenable(IRQ_KBD);
   ioapicenable(IRQ_KBD, 0);
-  cprintf("%s", "WELCOME..\n");
+  cprintf("%s", "WELCOME... Caret Navitation\n");
 }
 
