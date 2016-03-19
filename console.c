@@ -170,6 +170,34 @@ cgaputc(int c)
   crt[pos] = ' ' | 0x0700;
 }
 
+static void moveCursorLeft()
+{
+  int pos;
+  outb(CRTPORT, 14);
+  pos = inb(CRTPORT+1) << 8;
+  outb(CRTPORT, 15);
+  pos |= inb(CRTPORT+1);
+  pos--;
+  outb(CRTPORT, 14);
+  outb(CRTPORT+1, pos>>8);
+  outb(CRTPORT, 15);
+  outb(CRTPORT+1, pos);
+}
+
+static void moveCursorRight()
+{
+  int pos;
+  outb(CRTPORT, 14);
+  pos = inb(CRTPORT+1) << 8;
+  outb(CRTPORT, 15);
+  pos |= inb(CRTPORT+1);
+  pos++;
+  outb(CRTPORT, 14);
+  outb(CRTPORT+1, pos>>8);
+  outb(CRTPORT, 15);
+  outb(CRTPORT+1, pos);
+}
+
 void
 consputc(int c)
 {
@@ -197,13 +225,82 @@ struct {
 #define C(x)  ((x)-'@')  // Control-x
 
 void shiftBufferRight(){
-    uint charToMove = input.e;
-    while(charToMove != inputCaretPos){
-      input.buf[(charToMove + 1) % INPUT_BUF] = input.buf[charToMove];
-      print("char --");
+    uint charToMove = input.e - 1;
+    while(charToMove != inputCaretPos - 1){
+      input.buf[(charToMove + 1) % INPUT_BUF] = input.buf[charToMove % INPUT_BUF];
       charToMove--;
     }
+}
 
+void shiftBufferLeft(){
+    uint charToMove = inputCaretPos ;
+    while(charToMove < input.e + 1){
+      input.buf[charToMove % INPUT_BUF] = input.buf[charToMove + 1 % INPUT_BUF];
+      charToMove++;
+    }
+}
+
+static void clearCurrentLine(){
+	int pos;
+outb(CRTPORT, 14);
+  pos = inb(CRTPORT+1) << 8;
+  outb(CRTPORT, 15);
+  pos |= inb(CRTPORT+1);
+  pos = pos - pos%80+2;
+    int i;
+    for(i = pos; i < pos - pos%80 + 78; i++){
+  	crt[i] = ' ' | 0x0700; 
+  }
+}
+
+
+//***************************************************************
+//	Replace the current line:
+//***************************************************************
+static void replaceCurrentLine(char* buff)
+{
+  int pos, prevPos;
+  
+
+
+	clearCurrentLine();
+    //Move cursor to beginning of the line:
+  outb(CRTPORT, 14);
+  pos = inb(CRTPORT+1) << 8;
+  outb(CRTPORT, 15);
+  pos |= inb(CRTPORT+1);
+  prevPos = pos;
+  pos = pos - pos%80+2;
+
+  //Write the buffer to the line:
+  int index = 0;
+  char c = buff[index];
+  while (c!=0){
+  	crt[pos++] = c | 0x0700;
+  outb(CRTPORT, 14);
+  outb(CRTPORT+1, pos>>8);
+  outb(CRTPORT, 15);
+  outb(CRTPORT+1, pos);
+  index++;
+  c = buff[index];
+  }
+
+  //Put cursor back in previous location:
+    outb(CRTPORT, 14);
+  outb(CRTPORT+1, pos>>8);
+  outb(CRTPORT, 15);
+  outb(CRTPORT+1, prevPos);
+}
+
+static void printBufferToLine(){
+	int length = input.e - input.w;
+	char line[length + 1];
+	int i;
+	for(i = 0; i<length; i++){
+		line[i] = input.buf[(input.w + i)%INPUT_BUF];
+	}
+	line[length] = 0;
+	replaceCurrentLine(line);
 }
 
 void
@@ -214,10 +311,10 @@ consoleintr(int (*getc)(void))
 
   acquire(&cons.lock);
   while((c = getc()) >= 0){
-    char str[2] = "\0";
-    str[0] = c;
+    // char str[2] = "\0";
+    // str[0] = c;
 
-    print(str);
+    // print(str);
     switch(c){
     case C('P'):  // Process listing.
       doprocdump = 1;   // procdump() locks cons.lock indirectly; invoke later
@@ -232,32 +329,62 @@ consoleintr(int (*getc)(void))
       break;
     case C('H'): case '\x7f':  // Backspace
       if(input.e != input.w){
-        input.e--;
+      	      input.e--;
+      	      inputCaretPos--;
+
+      	 if(inputCaretPos < input.e){
+	        shiftBufferLeft();
+	        moveCursorLeft();
+	        printBufferToLine();
+
+    	}
+    	else{
         consputc(BACKSPACE);
-        inputCaretPos = input.e;
+    	}
       }
       break;
     case 228: //Left Arrow
+      	if (inputCaretPos > input.w){
       	inputCaretPos--;
-       print("left arrow pressed\n");
-
+      	moveCursorLeft();
+      	}
       break;
     case 229: //Right Arrow
-    	 print("right arrow pressed\n");
-
+    	 if(inputCaretPos < input.e){
+    	 	inputCaretPos++;
+    	 	moveCursorRight();
+    	 }
+    	 break;
+    case 227: //down:
+    	 	replaceCurrentLine("Hello bob!!");
       break;
     default:
-      print("Defalut");
-      if (input.e - inputCaretPos > 0){ //Marker is not at the end of the line:
-          shiftBufferRight();
+      //print("Defalut");
+      if (input.e - inputCaretPos > 0 && c != 0 && c!= '\n'){ //Marker is not at the end of the line:
+      	        c = (c == '\r') ? '\n' : c;
 
+      	   if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
+      	   	  input.buf[input.e++ % INPUT_BUF] = c;
+      	   	  inputCaretPos = input.e;
+	          input.w = input.e;
+	          wakeup(&input.r);
+	          break;
+        	}
+        	//not enter:
+        	input.e++;
+          shiftBufferRight();
+          input.buf[inputCaretPos++ % INPUT_BUF] = c;
+          printBufferToLine();
+          moveCursorRight();
       }
-      if(c != 0 && input.e-input.r < INPUT_BUF){
+
+      else if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
         inputCaretPos++;
         input.buf[input.e++ % INPUT_BUF] = c;
         consputc(c);
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
+          inputCaretPos = input.e;
           input.w = input.e;
           wakeup(&input.r);
         }
@@ -335,6 +462,6 @@ consoleinit(void)
 
   picenable(IRQ_KBD);
   ioapicenable(IRQ_KBD, 0);
-  cprintf("%s", "WELCOME... Caret Navitation\n");
+  //cprintf("%s", "WELCOME... Caret Navitation\n");
 }
 
