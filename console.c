@@ -47,13 +47,10 @@ static void strcpyn(char* dest, const char* source, int n){
 
 int sys_history(void)
 {
-	  	cprintf("%s", "History System Call!\n");
-
 	char *buffer;
 	int item;
   if(argstr(0, &buffer) < 0 || argint(1, &item) < 0){
   	cprintf("%s", "Error in buffer:");
-
     return -1;
   }
 	if(item < 0 || item > 15){ //Illegal History ID

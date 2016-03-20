@@ -141,6 +141,15 @@ getcmd(char *buf, int nbuf)
   return 0;
 }
 
+void printHistory(){
+  int i;
+  for(i = 0; i < 16; i++){
+    char* line = "";
+    history(line, i);
+    printf(1, line);
+  }
+}
+
 int
 main(void)
 {
@@ -157,6 +166,10 @@ main(void)
   
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
+          if(strcmp("history\n", buf) == 0){
+              printHistory();
+              continue;
+            }
     if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
       // Clumsy but will have to do for now.
       // Chdir has no effect on the parent if run in the child.
