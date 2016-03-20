@@ -21,12 +21,23 @@ static void printBufferToLine();
 
 int sys_history(void)
 {
-  // char* buffer;
-  // int historyId;
+	  	cprintf("%s", "History System Call!\n");
 
-  // if(argstr(0, &buffer) == 0 || argint(1, &historyId) < 0)
-  //   return -1;
-  replaceCurrentLine(historyArray[0]);
+	char *buffer;
+	int item;
+  if(argstr(0, &buffer) < 0 || argint(1, &item) < 0){
+  	cprintf("%s", "Error in buffer:");
+  	cprintf("%s", buffer);
+
+    return -1;
+  }
+	historyArray[0] = "item0\n";
+	historyArray[1] = "item1\n";
+	historyArray[2] = "item2\n";
+	historyArray[3] = "item3\n";
+	char* string = "hello!!";
+	buffer = string;
+
   // return history(buffer, historyId);
   return 1;
 }
