@@ -15,9 +15,35 @@
 #include "x86.h"
 
 #define MAX_HISTORY 16
-static char* historyArray[MAX_HISTORY];
+#define MAX_BUFFER 128
+ char historyArray[MAX_HISTORY][MAX_BUFFER * sizeof(char)];
+static int historyPos = 0;
+static int historyReadPos = 0;
+
 static void replaceCurrentLine(char*);
 static void printBufferToLine();
+
+static void initHistoryArray(){
+	int i;
+	for(i = 0; i < MAX_HISTORY; i++){
+		//TODO: change to normal initialization.
+		 historyArray[0][i] = 0;
+		}
+	}
+
+static void strcpy(char* dest, const char* source){
+	int i;
+	for(i = 0; i < MAX_BUFFER; i++){
+		dest[i] = source[i];
+	}
+}
+
+static void strcpyn(char* dest, const char* source, int n){
+	int i;
+	for(i = 0; i < n; i++){
+		dest[i] = source[i];
+	}
+}
 
 int sys_history(void)
 {
@@ -27,19 +53,14 @@ int sys_history(void)
 	int item;
   if(argstr(0, &buffer) < 0 || argint(1, &item) < 0){
   	cprintf("%s", "Error in buffer:");
-  	cprintf("%s", buffer);
 
     return -1;
   }
-	historyArray[0] = "item0\n";
-	historyArray[1] = "item1\n";
-	historyArray[2] = "item2\n";
-	historyArray[3] = "item3\n";
-	char* string = "hello!!";
-	buffer = string;
-
-  // return history(buffer, historyId);
-  return 1;
+	if(item < 0 || item > 15){ //Illegal History ID
+		return -2;
+	}
+	strcpy(buffer, historyArray[item]);
+  return 0;
 }
 
 static void consputc(int);
@@ -318,15 +339,51 @@ static void replaceCurrentLine(char* buff)
   outb(CRTPORT+1, prevPos);
 }
 
-static void printBufferToLine(){
+static void getBuffer(char* buffer){
 	int length = input.e - input.w;
-	char line[length + 1];
+	char line[MAX_BUFFER];
 	int i;
 	for(i = 0; i<length; i++){
 		line[i] = input.buf[(input.w + i)%INPUT_BUF];
 	}
 	line[length] = 0;
+	strcpyn(buffer, line, length);
+}
+
+static void printBufferToLine(){
+	char line[MAX_BUFFER];
+	getBuffer(line);
 	replaceCurrentLine(line);
+}
+
+// void putInBuffer(char* string){
+// 	input.w = input.e;
+// 	char c = string[0];
+// 	while(c != 0){
+// 		input.buf[input.e % INPUT_BUF] = c;
+// 		input.e++;
+// 	}
+// 	input.buf[input.e] = 0;
+// }
+
+void processLine(){
+	int bufferLength  = input.e - input.w;
+	if(bufferLength > 1){// Save to history:
+		if(historyPos == MAX_HISTORY){//Need to push back buffer:
+			// int i;
+			// for(i = 0; i < MAX_HISTORY - 1; i++){
+			// 	historyArray[i] = historyArray[i + 1];
+			// }
+		}
+		getBuffer(historyArray[historyPos]);
+		historyArray[historyPos][bufferLength] = 0;
+		
+		if(historyPos < MAX_HISTORY)
+			historyPos++;
+		historyReadPos = historyPos;
+	}
+	input.w = input.e;
+	wakeup(&input.r);
 }
 
 void
@@ -334,13 +391,8 @@ consoleintr(int (*getc)(void))
 {
   
   int c, doprocdump = 0;
-
   acquire(&cons.lock);
   while((c = getc()) >= 0){
-    // char str[2] = "\0";
-    // str[0] = c;
-
-    // print(str);
     switch(c){
     case C('P'):  // Process listing.
       doprocdump = 1;   // procdump() locks cons.lock indirectly; invoke later
@@ -362,7 +414,6 @@ consoleintr(int (*getc)(void))
 	        shiftBufferLeft();
 	        moveCursorLeft();
 	        printBufferToLine();
-
     	}
     	else{
         consputc(BACKSPACE);
@@ -381,9 +432,24 @@ consoleintr(int (*getc)(void))
     	 	moveCursorRight();
     	 }
     	 break;
+    case 226: //up:
+      if(historyReadPos > 0)
+      	historyReadPos--;
+      	replaceCurrentLine(historyArray[historyReadPos]);
+      	// putInBuffer(historyArray[historyReadPos]);
+      break;
     case 227: //down:
-      sys_history();
+    if(historyReadPos < historyPos)
+    	historyReadPos++;
+      if(historyReadPos == historyPos){
+      	replaceCurrentLine("");
+      	// putInBuffer("");
+      }
+      else{
+		replaceCurrentLine(historyArray[historyReadPos]);
+		// putInBuffer(historyArray[historyReadPos]);
 
+      }
       break;
     default:
       //print("Defalut");
@@ -393,8 +459,7 @@ consoleintr(int (*getc)(void))
       	   if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
       	   	  input.buf[input.e++ % INPUT_BUF] = c;
       	   	  inputCaretPos = input.e;
-	          input.w = input.e;
-	          wakeup(&input.r);
+	          processLine();
 	          break;
         	}
         	//not enter:
@@ -412,8 +477,7 @@ consoleintr(int (*getc)(void))
         consputc(c);
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
           inputCaretPos = input.e;
-          input.w = input.e;
-          wakeup(&input.r);
+          processLine();
         }
       }
       break;
@@ -490,6 +554,6 @@ consoleinit(void)
   picenable(IRQ_KBD);
   ioapicenable(IRQ_KBD, 0);
   //cprintf("%s", "WELCOME... Caret Navitation\n");
-  historyArray[0] = "History part 0!";
+  initHistoryArray();
 }
 
