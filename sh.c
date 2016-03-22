@@ -144,7 +144,7 @@ getcmd(char *buf, int nbuf)
 void printHistory(){
   int i;
   for(i = 0; i < 16; i++){
-    char* line = "";
+    char line[128];
     history(line, i);
     printf(1, line);
   }

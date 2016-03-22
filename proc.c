@@ -17,13 +17,57 @@ static struct proc *initproc;
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
+extern uint sys_uptime;
+extern uint ticks;
 
 static void wakeup1(void *chan);
+
+void printStats(){
+    struct proc *tmpProc;
+    tmpProc = ptable.proc;
+    int i;
+    for(i = 0; i < 64; i++){ 
+
+    cprintf("%s%d\n", "i: ", i);
+
+      cprintf("%s%d\n", "tmpProc: ", tmpProc);
+      cprintf("%s%d\n", "finish:  ", &ptable.proc[NPROC]);
+
+      cprintf("%s\n", "Process *****************\n");
+  cprintf("%s%d\n", "Process ID: ", tmpProc -> pid);
+
+  cprintf("%s%d\n", "Process Creation time is: ", tmpProc -> ctime);
+  cprintf("%s%d\n", "Process Running time is: ", tmpProc -> rutime);
+  cprintf("%s%d\n", "Process Ready time is: ", tmpProc -> retime);
+  cprintf("%s%d\n", "Process Sleeping time is: ", tmpProc -> stime);
+  if(i == 63)
+    break;
+  }
+}
 
 void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+}
+
+void updateProcessesTime(){
+  struct proc *tmpProc;
+  for(tmpProc = ptable.proc; tmpProc < &ptable.proc[NPROC]; tmpProc++){ 
+    if(tmpProc -> state == RUNNING){
+        tmpProc -> rutime++;
+    }
+
+    else if(tmpProc -> state == SLEEPING){
+        tmpProc -> stime++;
+    }
+    
+    else if(tmpProc -> state == RUNNABLE){
+        tmpProc -> retime++;
+    }
+
+    tmpProc++;
+  }
 }
 
 //PAGEBREAK: 32
@@ -158,11 +202,14 @@ fork(void)
  
   pid = np->pid;
 
+  //Set creation time:
+  np -> ctime = ticks;
+  cprintf("%s%d\n", "Process Creation time is: ", np -> ctime);
+
   // lock to force the compiler to emit the np->state write last.
   acquire(&ptable.lock);
   np->state = RUNNABLE;
   release(&ptable.lock);
-  
   return pid;
 }
 
@@ -252,6 +299,29 @@ wait(void)
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(proc, &ptable.lock);  //DOC: wait-sleep
   }
+}
+
+int sys_wait2(void)
+{
+  cprintf("%s", "Wait2 system call called\n");
+  int retime = 0, rutime = 0, stime = 0;
+  if(argint(0, &retime) < 0 || argint(1, &rutime) < 0 || argint(2, &stime) < 0){
+    return -1;
+  }
+  int res;
+  res = wait();
+  *(int*)retime = proc->retime;
+  *(int*)rutime = proc->rutime;
+  *(int*)stime = 17;
+  return res;
+
+  // if(argptr(0, (char **)&retime,sizeof(int *)) < 0)
+  //   return -1;
+  // if(argptr(1, (char **)&rutime,sizeof(int *)) < 0)
+  //   return -1;
+  // if(argptr(2, (char **)&stime,sizeof(int *)) < 0)    cprintf("%s", "Error in buffer:");
+  //   return -1;
+
 }
 
 //PAGEBREAK: 42

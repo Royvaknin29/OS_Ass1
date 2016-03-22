@@ -5,10 +5,17 @@ int
 main(int argc, char *argv[]){
     printf(1, "     Welcome to Testing File!!!\n");
     printf(1, "*************************************\n");
-    char buffer[100] = "";
-    history(buffer, 2);
 
-    printf(1, buffer);
+    int *retime = 0;
+    int *rutime = 0;
+    int *stime = 0;
 
+    wait2(retime, rutime, stime);
+
+    printf(1, "%d%s", *retime, " - retime\n");
+    printf(1, "%d%s", rutime, " - rutime\n");
+    printf(1, "%d%s", stime, " - stime\n");
+
+    printf(1, "%s", "Testing finished");
     exit();
 }
