@@ -14,7 +14,9 @@ struct {
 
 static struct proc *initproc;
 
+
 int nextpid = 1;
+
 extern void forkret(void);
 extern void trapret(void);
 extern uint sys_uptime;
@@ -91,6 +93,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->priority = 2;
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -144,6 +147,8 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+  p->priority = 2;
+
 }
 
 // Grow current process's memory by n bytes.
@@ -209,6 +214,8 @@ fork(void)
   // lock to force the compiler to emit the np->state write last.
   acquire(&ptable.lock);
   np->state = RUNNABLE;
+
+  np->priority = proc->priority;
   release(&ptable.lock);
   return pid;
 }
@@ -301,6 +308,19 @@ wait(void)
   }
 }
 
+
+int sys_set_prio(void)
+{
+  cprintf("%s", "setPriority system call called\n");
+  int selectedPriority = 0;
+  if(argint(0, &selectedPriority) > 1 || selectedPriority > 3){
+    cprintf("%s%d", "Illegal Priority selected: ", selectedPriority);
+    return -1;
+  }
+  proc->priority = selectedPriority;
+  return 0;
+}
+
 int sys_wait2(void)
 {
   cprintf("%s", "Wait2 system call called\n");
@@ -314,14 +334,6 @@ int sys_wait2(void)
   *(int*)rutime = proc->rutime;
   *(int*)stime = 17;
   return res;
-
-  // if(argptr(0, (char **)&retime,sizeof(int *)) < 0)
-  //   return -1;
-  // if(argptr(1, (char **)&rutime,sizeof(int *)) < 0)
-  //   return -1;
-  // if(argptr(2, (char **)&stime,sizeof(int *)) < 0)    cprintf("%s", "Error in buffer:");
-  //   return -1;
-
 }
 
 //PAGEBREAK: 42
@@ -332,6 +344,29 @@ int sys_wait2(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+
+struct proc* getHighestRunnablePriority(){
+  struct proc* p;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE && p->priority == 3){
+        return p;
+      }
+    }
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE && p->priority == 2){
+
+        return p;
+      }
+    }
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE && p->priority == 1){
+        return p;
+      }
+    }
+  return 0;
+}
+
+#ifdef DEFAULT
 void
 scheduler(void)
 {
@@ -364,7 +399,111 @@ scheduler(void)
 
   }
 }
+#elif FCFS
+void
+scheduler(void)
+{
+  struct proc *p;
 
+  for(;;){
+    // Enable interrupts on this processor.
+    sti();
+
+    // Loop over process table looking for process to run.
+    acquire(&ptable.lock);
+    int minCreateTime = 2147483647; //Max int value
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE && p->ctime < minCreateTime)
+        minCreateTime = p->ctime;
+      }
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE || p->ctime > minCreateTime)
+        continue;
+
+      // Switch to Lowest creation time process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&cpu->scheduler, proc->context);
+      switchkvm();
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      proc = 0;
+    }
+    release(&ptable.lock);
+
+  }
+}
+
+#elif SML
+void
+scheduler(void)
+{  
+  struct proc *p;
+
+  for(;;){
+    // Enable interrupts on this processor.
+    sti();
+
+    // Loop over process table looking for highest priority process to run:
+    acquire(&ptable.lock);
+    p = getHighestRunnablePriority();
+    if(p != 0){
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&cpu->scheduler, proc->context);
+      switchkvm();
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      proc = 0;
+    }
+      release(&ptable.lock);
+
+    }
+  }
+#endif
+
+#elif DML
+void
+scheduler(void)
+{  
+  struct proc *p;
+
+  for(;;){
+    // Enable interrupts on this processor.
+    sti();
+
+    // Loop over process table looking for highest priority process to run:
+    acquire(&ptable.lock);
+    p = getHighestRunnablePriority();
+    if(p != 0){
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&cpu->scheduler, proc->context);
+      switchkvm();
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      proc = 0;
+    }
+      release(&ptable.lock);
+
+    }
+  }
+#endif
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state.
 void

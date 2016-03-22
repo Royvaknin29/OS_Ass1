@@ -31,4 +31,6 @@ SYSCALL(sleep)
 SYSCALL(uptime)
 SYSCALL(history)
 SYSCALL(wait2)
+SYSCALL(set_prio)
+
 

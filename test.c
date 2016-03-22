@@ -9,10 +9,9 @@ main(int argc, char *argv[]){
     int *retime = 0;
     int *rutime = 0;
     int *stime = 0;
-
-    wait2(retime, rutime, stime);
-
-    printf(1, "%d%s", *retime, " - retime\n");
+    
+    set_prio(3);
+    printf(1, "%d%s", retime, " - retime\n");
     printf(1, "%d%s", rutime, " - rutime\n");
     printf(1, "%d%s", stime, " - stime\n");
 
