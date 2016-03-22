@@ -470,40 +470,15 @@ scheduler(void)
 
     }
   }
-#endif
-
 #elif DML
 void
 scheduler(void)
 {  
-  struct proc *p;
+    //TODO: Finish this...
+}
 
-  for(;;){
-    // Enable interrupts on this processor.
-    sti();
-
-    // Loop over process table looking for highest priority process to run:
-    acquire(&ptable.lock);
-    p = getHighestRunnablePriority();
-    if(p != 0){
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&cpu->scheduler, proc->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      proc = 0;
-    }
-      release(&ptable.lock);
-
-    }
-  }
 #endif
+
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state.
 void
