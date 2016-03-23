@@ -249,7 +249,6 @@ exit(void)
 
   // Parent might be sleeping in wait().
   wakeup1(proc->parent);
-
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->parent == proc){
@@ -308,13 +307,12 @@ wait(void)
   }
 }
 
-
 int sys_set_prio(void)
 {
   cprintf("%s", "setPriority system call called\n");
   int selectedPriority = 0;
-  if(argint(0, &selectedPriority) > 1 || selectedPriority > 3){
-    cprintf("%s%d", "Illegal Priority selected: ", selectedPriority);
+  if(argint(0, &selectedPriority) < 1 || selectedPriority > 3){
+    cprintf("%s%d\n", "Illegal Priority selected: ", selectedPriority);
     return -1;
   }
   proc->priority = selectedPriority;
@@ -470,8 +468,6 @@ scheduler(void)
 
     }
   }
-#endif
-
 #elif DML
 void
 scheduler(void)
@@ -504,6 +500,7 @@ scheduler(void)
     }
   }
 #endif
+
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state.
 void
@@ -601,8 +598,12 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+    if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
+      #ifdef DML
+      p->priority = 3;
+      #endif
+    }
 }
 
 // Wake up all processes sleeping on chan.
