@@ -248,7 +248,7 @@ exit(void)
   acquire(&ptable.lock);
 
   // Parent might be sleeping in wait().
-  wakeup1(proc->parent);
+  `up1(proc->parent);
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -308,13 +308,12 @@ wait(void)
   }
 }
 
-
 int sys_set_prio(void)
 {
   cprintf("%s", "setPriority system call called\n");
   int selectedPriority = 0;
-  if(argint(0, &selectedPriority) > 1 || selectedPriority > 3){
-    cprintf("%s%d", "Illegal Priority selected: ", selectedPriority);
+  if(argint(0, &selectedPriority) < 1 || selectedPriority > 3){
+    cprintf("%s%d\n", "Illegal Priority selected: ", selectedPriority);
     return -1;
   }
   proc->priority = selectedPriority;
@@ -474,9 +473,33 @@ scheduler(void)
 void
 scheduler(void)
 {  
-    //TODO: Finish this...
-}
+  struct proc *p;
 
+  for(;;){
+    // Enable interrupts on this processor.
+    sti();
+
+    // Loop over process table looking for highest priority process to run:
+    acquire(&ptable.lock);
+    p = getHighestRunnablePriority();
+    if(p != 0){
+      // Switch to chosen process.  It is the process's job
+      // to release ptable.lock and then reacquire it
+      // before jumping back to us.
+      proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&cpu->scheduler, proc->context);
+      switchkvm();
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      proc = 0;
+    }
+      release(&ptable.lock);
+
+    }
+  }
 #endif
 
 // Enter scheduler.  Must hold only ptable.lock
@@ -567,6 +590,8 @@ sleep(void *chan, struct spinlock *lk)
   }
 }
 
+
+}
 //PAGEBREAK!
 // Wake up all processes sleeping on chan.
 // The ptable lock must be held.
@@ -576,8 +601,12 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+    if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
+      #ifdef DML
+      p->priority = 3;
+      #endif
+    }
 }
 
 // Wake up all processes sleeping on chan.

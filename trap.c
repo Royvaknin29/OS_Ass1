@@ -31,7 +31,11 @@ idtinit(void)
 {
   lidt(idt, sizeof(idt));
 }
-
+void decreaseProcessPriority(struct proc *p){
+  if (p->priority > 1){
+    p->priority--;
+  }
+}
 //PAGEBREAK: 41
 void
 trap(struct trapframe *tf)
@@ -105,8 +109,12 @@ trap(struct trapframe *tf)
 #ifndef FCFS //FCFS Policy Needs to be Non-Preemptive:
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
-  if(proc && proc->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER % QUANTA)
+  if(proc && proc->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER % QUANTA){
+    #ifdef DML
+    decreaseProcessPriority(proc);
+    #endif
     yield();
+  }
 #endif
 
   // Check if the process has been killed since we yielded
