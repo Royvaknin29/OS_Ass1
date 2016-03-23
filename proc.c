@@ -521,6 +521,14 @@ sched(void)
   cpu->intena = intena;
 }
 
+int sys_yield(void){
+cprintf("yield system call called\n");
+yield();
+ if (proc->state != RUNNABLE){
+  return 0;
+ }
+return 1;
+}
 // Give up the CPU for one scheduling round.
 void
 yield(void)

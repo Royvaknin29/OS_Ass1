@@ -9,12 +9,13 @@ main(int argc, char *argv[]){
     int *retime = 0;
     int *rutime = 0;
     int *stime = 0;
-    
-    set_prio(3);
+    int i;
+    //set_prio(3);
     printf(1, "%d%s", retime, " - retime\n");
     printf(1, "%d%s", rutime, " - rutime\n");
     printf(1, "%d%s", stime, " - stime\n");
-
+    i = yield();
+    printf(1, "%s%d\n", "i is", i);
     printf(1, "%s", "Testing finished");
     exit();
 }
