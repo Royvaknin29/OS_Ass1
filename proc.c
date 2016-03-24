@@ -330,7 +330,7 @@ int sys_wait2(void)
   res = wait();
   *(int*)retime = proc->retime;
   *(int*)rutime = proc->rutime;
-  *(int*)stime = 17;
+  *(int*)stime = proc->stime;
   return res;
 }
 
@@ -522,7 +522,6 @@ sched(void)
 }
 
 int sys_yield(void){
-cprintf("yield system call called\n");
 yield();
  if (proc->state != RUNNABLE){
   return 0;
