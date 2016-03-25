@@ -309,8 +309,9 @@ wait(void)
 int sys_set_prio(void)
 {
   cprintf("%s", "setPriority system call called\n");
-  int selectedPriority = 0;
-  if(argint(0, &selectedPriority) < 1 || selectedPriority > 3){
+  int selectedPriority = -1;
+  argint(0, &selectedPriority);
+  if( selectedPriority < 1 || selectedPriority > 3){
     cprintf("%s%d\n", "Illegal Priority selected: ", selectedPriority);
     return -1;
   }
