@@ -209,7 +209,6 @@ fork(void)
 
   //Set creation time:
   np -> ctime = ticks;
-  cprintf("%s%d\n", "Process Creation time is: ", np -> ctime);
 
   // lock to force the compiler to emit the np->state write last.
   acquire(&ptable.lock);
@@ -321,7 +320,6 @@ int sys_set_prio(void)
 
 int sys_wait2(void)
 {
-  cprintf("%s", "Wait2 system call called\n");
   int retime = 0, rutime = 0, stime = 0;
   if(argint(0, &retime) < 0 || argint(1, &rutime) < 0 || argint(2, &stime) < 0){
     return -1;
