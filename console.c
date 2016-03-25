@@ -38,12 +38,12 @@ static void strcpy(char* dest, const char* source){
 	}
 }
 
-static void strcpyn(char* dest, const char* source, int n){
-	int i;
-	for(i = 0; i < n; i++){
-		dest[i] = source[i];
-	}
-}
+// static void strcpyn(char* dest, const char* source, int n){
+// 	int i;
+// 	for(i = 0; i < n; i++){
+// 		dest[i] = source[i];
+// 	}
+// }
 
 int sys_history(void)
 {
@@ -155,7 +155,6 @@ void print(char* string){
       cons.locking = 0;
       cprintf(string);
       cprintf("\n");
-
     }
 
 void
@@ -330,7 +329,7 @@ static void replaceCurrentLine(char* buff)
   }
 
   //Put cursor back in previous location:
-    outb(CRTPORT, 14);
+  outb(CRTPORT, 14);
   outb(CRTPORT+1, pos>>8);
   outb(CRTPORT, 15);
   outb(CRTPORT+1, prevPos);
@@ -338,13 +337,11 @@ static void replaceCurrentLine(char* buff)
 
 static void getBuffer(char* buffer){
 	int length = input.e - input.w;
-	char line[MAX_BUFFER];
 	int i;
 	for(i = 0; i<length; i++){
-		line[i] = input.buf[(input.w + i)%INPUT_BUF];
+		buffer[i] = input.buf[(input.w + i)%INPUT_BUF];
 	}
-	line[length] = 0;
-	strcpyn(buffer, line, length);
+	buffer[length] = 0;
 }
 
 static void printBufferToLine(){
@@ -353,33 +350,52 @@ static void printBufferToLine(){
 	replaceCurrentLine(line);
 }
 
-// void putInBuffer(char* string){
-// 	input.w = input.e;
-// 	char c = string[0];
-// 	while(c != 0){
-// 		input.buf[input.e % INPUT_BUF] = c;
-// 		input.e++;
-// 	}
-// 	input.buf[input.e] = 0;
-// }
+void putInBuffer(char* string){
+	input.e = input.w;
+	int index = 0;
+	char c = string[index];
+	while(c != 0){
+		input.buf[input.e % INPUT_BUF] = c;
+		input.e++;
+		index++;
+		c = string[index];
+	}
+	input.buf[input.e] = 0;
+}
 
 void processLine(){
 	int bufferLength  = input.e - input.w;
-	if(bufferLength > 1){// Save to history:
-		if(historyPos == MAX_HISTORY){//Need to push back buffer:
-			// int i;
-			// for(i = 0; i < MAX_HISTORY - 1; i++){
-			// 	historyArray[i] = historyArray[i + 1];
-			// }
+	char line[MAX_BUFFER];
+	getBuffer(line);
+	if(!(line[0] == 'h' && 
+		line[1] == 'i' &&
+		line[2] == 's' &&
+		line[3] == 't' &&
+		line[4] == 'o' &&
+		line[5] == 'r' &&
+		line[6] == 'y' &&
+		line[7] == '\n')){
+		if(bufferLength > 1){// Save to history:
+			getBuffer(historyArray[historyPos]);
+			historyArray[historyPos][bufferLength - 1] = 0;
+			if(historyPos == MAX_HISTORY -1){//Need to push back buffer:
+				int i;
+				for(i = 0; i < MAX_HISTORY; i++){
+					int j;
+					for(j = 0; j < MAX_BUFFER; j++){
+						historyArray[i][j] = historyArray[i + 1][j];
+					}
+				}
+			}
+			historyArray[historyPos][bufferLength - 1] = 0;
+			
+			if(historyPos < MAX_HISTORY - 1)
+				historyPos++;
 		}
-		getBuffer(historyArray[historyPos]);
-		historyArray[historyPos][bufferLength] = 0;
-		
-		if(historyPos < MAX_HISTORY)
-			historyPos++;
 		historyReadPos = historyPos;
-	}
-	input.w = input.e;
+		}
+		input.w = input.e;
+
 	wakeup(&input.r);
 }
 
@@ -431,20 +447,23 @@ consoleintr(int (*getc)(void))
     	 break;
     case 226: //up:
       if(historyReadPos > 0)
-      	historyReadPos--;
-      	replaceCurrentLine(historyArray[historyReadPos]);
-      	// putInBuffer(historyArray[historyReadPos]);
+
+      	replaceCurrentLine(historyArray[historyReadPos - 1]);
+      	putInBuffer(historyArray[historyReadPos - 1]);
+		historyReadPos--;
+
+
       break;
     case 227: //down:
     if(historyReadPos < historyPos)
     	historyReadPos++;
       if(historyReadPos == historyPos){
       	replaceCurrentLine("");
-      	// putInBuffer("");
+        putInBuffer("");
       }
       else{
 		replaceCurrentLine(historyArray[historyReadPos]);
-		// putInBuffer(historyArray[historyReadPos]);
+		putInBuffer(historyArray[historyReadPos]);
 
       }
       break;

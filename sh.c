@@ -146,7 +146,10 @@ void printHistory(){
   for(i = 0; i < 16; i++){
     char line[128];
     history(line, i);
-    printf(1, line);
+    if(strlen(line)>0){
+      printf(1, line);
+      printf(1, "\n");
+  }
   }
 }
 
