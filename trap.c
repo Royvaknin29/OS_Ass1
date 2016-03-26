@@ -31,11 +31,13 @@ idtinit(void)
 {
   lidt(idt, sizeof(idt));
 }
+
 void decreaseProcessPriority(struct proc *p){
   if (p->priority > 1){
     p->priority--;
   }
 }
+
 //PAGEBREAK: 41
 void
 trap(struct trapframe *tf)

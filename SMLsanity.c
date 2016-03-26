@@ -41,7 +41,8 @@ main(int argc, char *argv[]){
         for(j = 0; j < 21; j++){
             statsPid = wait2(&retime, &runtime, &stime);
             numOfFinishedProcesses++;            
-            printf(1,"%s %d %s %d %s %d %s %d %s %d %s\n", "ProcessID:", statsPid,"Priority:", (statsPid % 3) + 1,  "retime:", retime, "runtime:", runtime, "stime:", stime, "Finished Running.");
+            printf(1,"%s %d %s %d %s %d %s %d %s %d %s\n",
+             "ProcessID:", statsPid,"Priority:", (statsPid % 3) + 1,  "retime:", retime, "runtime:", runtime, "stime:", stime, "Finished Running.");
 
             }
         

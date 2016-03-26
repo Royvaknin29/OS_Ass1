@@ -1,5 +1,6 @@
 #include "types.h"
 #include "user.h"
+
  struct procTypeStats{
   int totalSleepTime;
   int totalReadyTime;
@@ -73,7 +74,7 @@ main(int argc, char *argv[]){
             }
         }
     } 
-    else{
+    else{//Pid != 0:
         int j, processType;;
         int statsPid, retime, runtime, stime;
         char* types [3];
